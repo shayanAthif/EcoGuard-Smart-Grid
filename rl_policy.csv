@@ -1,0 +1,5 @@
+,0
+Stable,No_Action
+Low_Voltage,No_Action
+Critical,Switch_Cap_Bank
+Blackout,Island_Grid
