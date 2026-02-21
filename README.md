@@ -5,7 +5,7 @@ This project implements a **Cyber-Physical Digital Twin** for power grids to sim
 
 ## System Architecture
 
-The framework consists of three integrated phases creating a complete **Cyber-Physical Loop**.
+The framework consists of four integrated phases creating a complete **Cyber-Physical Loop** with physics-level validation.
 
 ### 1. Cyber-Attack Detection (Phase 1)
 - **Input**: Network traffic data (UNSW-NB15 Dataset).
@@ -25,6 +25,16 @@ The framework consists of three integrated phases creating a complete **Cyber-Ph
 - **Observation**: Monitors the "Digital Twin" state (Bus Voltages, Line Loading).
 - **Action**: Autonomously executes grid maneuvers (Island Microgrid, Shed Load, Switch Capacitor) to restore stability.
 
+### 4. Physics-Level Nodal Analysis (Phase 4)
+- **Purpose**: Validates RL defense outcomes through rigorous **physics-based vulnerability assessment**.
+- **SIR Epidemic Model**: Models cascading failures as an epidemic — buses transition between **Susceptible → Infected → Recovered** states based on voltage degradation rates.
+- **Vulnerability Indices**: Computes three complementary per-bus indices:
+    - **Voltage Offset Index (I_v)** — Proximity of each bus voltage to the critical threshold.
+    - **Power Flow Coupling Index (L_v)** — Entropy-based measure of how power redistributes through a bus.
+    - **Frequency Response Index (D_v)** — Exposure to frequency deviations based on generator inertia and electrical distance.
+- **Fault Severity Index (R)**: A composite metric aggregating D, L, and I to rank the most vulnerable buses.
+- **Outputs**: Graphs for voltage timeseries, branch power flow redistribution, nodal vulnerability dashboards, and SIR propagation curves.
+
 ![alt text](image.png)
 
 ## Experimental Results
@@ -42,7 +52,7 @@ The following table summarizes the performance of the RL Agent compared to a bas
 | Scenario | Grid | Avg Volt (Base) | Avg Volt (RL) | Violations (Base) | Violations (RL) | RMSE (Base) | RMSE (RL) | Resilience Improv. (%) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **1** | IEEE 13 | 0.886 | **0.952** | 3 | **2** | 0.281 | **0.111** | 60.48% |
-| **2** | IEEE 33 | 0.901 | **0.969** | 2 | **0** | 0.261 | **0.032** | 87.85% |
+| **2** | IEEE 39 | 0.901 | **0.969** | 2 | **0** | 0.261 | **0.032** | 87.85% |
 | **3** | IEEE 300 | 0.844 | 0.844 | 3 | 3 | 0.450 | 0.450 | 0.00% |
 | **4** | IEEE 118 | 0.985 | 0.985 | 0 | 0 | 0.015 | 0.015 | 0.00% |
 | **5** | CIGRE MV | 0.857 | **0.987** | 3 | **0** | 0.366 | **0.019** | 94.84% |
@@ -52,20 +62,48 @@ The following table summarizes the performance of the RL Agent compared to a bas
 | **9** | IEEE 118 | 0.985 | 0.985 | 0 | 0 | 0.015 | 0.015 | 0.00% |
 | **10** | CIGRE MV | 0.985 | **0.989** | 2 | **0** | 0.025 | **0.016** | 37.43% |
 
+### Physics Analysis Outputs
 
+The Phase 4 analysis generates four key visualizations:
+
+| Graph | Description |
+| :--- | :--- |
+| **Voltage Timeseries** | Per-bus voltage magnitude over all simulation timesteps with attack window shading |
+| **Branch Power Flow** | Active & reactive power redistribution on lines adjacent to attacked buses |
+| **Nodal Vulnerability Dashboard** | 2×2 panel of per-bus I_v, L_v, D_v, and composite R indices |
+| **SIR Propagation Curve** | Epidemic-model cascading failure spread with staircase multi-stage attack progression |
 
 
 ## Project Structure
 
-- `phase1.ipynb`: Contains the Phase 1 implementation for training the Cyber-Attack Detection Ensembling Models.
-- `grid_models.py`: Handles grid topology generation (IEEE 13, 33, 123, 118, 300, GB, SimBench).
-- `attack_logic.py`: Contains the logic for targeting critical assets and applying physical attacks (FDI, Ransomware).
-- `visualization.py`: Provides advanced plotting for cascading failures and grid restoration.
-- `phase2_sim.py`: Runs the Phase 2 simulation loop (Attack Simulation).
-- `phase3_defense.py`: Runs the Phase 3 training loop (RL Defense).
-- `main.py`: The single entry point for running the project.
-- `run_custom_scenarios.py`: Batch runner for generating results across 10 scenarios.
-- `generate_research_metrics.py`: Calculates quantitative metrics for the paper.
+```
+EcoGuard-Smart-Grid/
+│
+├── phase1.ipynb                  # Phase 1 — Cyber-Attack Detection (GNN + DL classifier)
+├── grid_models.py                # Grid topology generation (IEEE 13, 33, 118, 300, GB, CIGRE, SimBench)
+├── attack_logic.py               # Critical asset targeting & physical attack logic (FDI, Ransomware)
+├── phase2_sim.py                 # Phase 2 — Attack Simulation loop
+├── phase3_defense.py             # Phase 3 — RL Defense training loop (DQN agent)
+├── physics_analysis.py           # Phase 4 — Physics-level nodal analysis & SIR epidemic model
+├── visualization.py              # Advanced plotting for cascading failures & grid restoration
+├── main.py                       # Single entry point for running the project
+├── run_custom_scenarios.py       # Batch runner for generating results across 10 scenarios
+├── generate_research_metrics.py  # Quantitative metrics calculation for research paper
+├── render_metrics_table.py       # Renders the metrics table as a PNG image
+├── hello.py                      # Standalone voltage cascade visualization script
+│
+├── UNSW_NB15_training-set.csv    # Training dataset (UNSW-NB15)
+├── UNSW_NB15_testing-set.csv     # Testing dataset (UNSW-NB15)
+├── research_metrics.csv          # Generated research metrics
+├── rl_policy.csv                 # Trained RL policy data
+│
+└── graphs/                       # Output visualizations
+    ├── voltage_timeseries.png
+    ├── branch_power.png
+    ├── nodal_indices_post_attack.png
+    ├── sir_propogation.png
+    └── Scenario*_Phase*.png      # Per-scenario Phase 2 & Phase 3 graphs
+```
 
 ## Key Features
 
@@ -73,15 +111,17 @@ The following table summarizes the performance of the RL Agent compared to a bas
 - **Closed-Loop Physics**: Actions (Load Shedding, Capacitor Switching) physically modify the grid model and trigger a fresh Power Flow solution.
 - **Deterministic Simulation**: Random seeds are synchronized across Attack and Defense phases to ensure fair comparison.
 - **Advanced Visualization**: Generates publication-ready time-series plots with shaded resilience regions.
+- **SIR Epidemic Modeling**: Applies epidemiological models to power grid cascading failures — treating voltage collapse as a contagion spreading through electrically coupled buses.
+- **Composite Vulnerability Indices**: Ranks bus criticality using physics-derived metrics (Voltage Offset, Power Flow Coupling, Frequency Response) fused into a single Fault Severity Index.
 
 ## Installation & Usage
 
 1.  **Install Dependencies**:
     ```bash
-    pip install pandapower pandas numpy matplotlib seaborn simbench
+    pip install pandapower pandas numpy matplotlib seaborn simbench scipy
     ```
 
-2.  **Run Simulation**:
+2.  **Run Full Simulation** (Phases 2 + 3 + 4):
     To reproduce the results above, run the automated scenario manager:
     ```bash
     python run_custom_scenarios.py
@@ -95,3 +135,28 @@ The following table summarizes the performance of the RL Agent compared to a bas
     # Phase 3: Defense Training
     python main.py --phase 3 --grid ieee13 --episodes 1000
     ```
+
+3.  **Run Physics Analysis** (Phase 4 — standalone):
+    ```bash
+    python physics_analysis.py
+    ```
+
+4.  **Run Standalone Voltage Cascade Visualization**:
+    ```bash
+    python hello.py
+    ```
+
+## Technologies Used
+
+| Category | Tools |
+| :--- | :--- |
+| **Power Systems** | pandapower, SimBench |
+| **Machine Learning** | PyTorch, Scikit-learn, Deep Q-Network (DQN) |
+| **Graph Neural Networks** | PyTorch Geometric |
+| **Scientific Computing** | NumPy, SciPy, Pandas |
+| **Visualization** | Matplotlib, Seaborn |
+| **Dataset** | UNSW-NB15 (Cyber-attack traffic) |
+
+## License
+
+This project is for academic and research purposes.
