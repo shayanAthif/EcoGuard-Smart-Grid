@@ -92,6 +92,8 @@ class GridBuilder:
             return GridBuilder.create_ieee33_grid()
         elif grid_name == "ieee123":
             return GridBuilder.create_ieee123_grid()
+        elif grid_name == "ieee39":
+            return pn.case39()
         elif grid_name == "ieee118":
             return pn.case118()
         elif grid_name == "ieee300":
@@ -107,5 +109,5 @@ class GridBuilder:
 
     @staticmethod
     def available_models():
-        return ["ieee13", "ieee33", "ieee123", "ieee118", "ieee300", "cigre_mv", "gbnetwork", "simbench"]
+        return ["ieee13", "ieee33", "ieee39", "ieee123", "ieee118", "ieee300", "cigre_mv", "gbnetwork", "simbench"]
 
