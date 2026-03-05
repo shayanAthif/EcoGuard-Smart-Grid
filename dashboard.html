@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>IEEE 39-Bus New England Grid – IEMS Scenario 8</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:wght@400;600&display=swap');
+
+    :root {
+      --bg: #f5f6f8;
+      --surface: #ffffff;
+      --border: #d0d5dd;
+      --border-light: #e4e7ec;
+      --text: #1a202c;
+      --text-muted: #6b7280;
+      --text-light: #9ca3af;
+      --accent: #1d4ed8;
+      --accent-light: #eff6ff;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --orange: #d97706;
+      --orange-light: #fffbeb;
+      --green: #16a34a;
+      --green-light: #f0fdf4;
+      --gen-color: #1d4ed8;
+      --wind-color: #059669;
+      --load-color: #4b5563;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      pointer-events: none;
+    }
+
+    .title-block h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .title-block p {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .hstat {
+      text-align: center;
+      padding: 4px 14px;
+      border-right: 1px solid var(--border);
+    }
+    .hstat:last-child { border-right: none; }
+
+    .hstat-val {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .hstat-label {
+      font-size: 0.56rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Legend ── */
+    #legend {
+      position: fixed;
+      bottom: 16px;
+      right: 286px;
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      min-width: 190px;
+      box-shadow: var(--shadow-md);
+    }
+
+    #legend h3 {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-light);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .leg-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      font-size: 0.66rem;
+      color: var(--text);
+    }
+
+    .leg-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .leg-line {
+      width: 22px; height: 2px;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      position: fixed;
+      z-index: 30;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.65rem;
+      pointer-events: none;
+      display: none;
+      min-width: 200px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .tt-title {
+      font-family: 'Source Serif 4', serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 7px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text);
+    }
+
+    .tt-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 3px;
+    }
+
+    .tt-label { color: var(--text-muted); }
+    .tt-val { color: var(--text); font-weight: 500; }
+
+    /* ── Controls ── */
+    #controls {
+      position: fixed;
+      top: 60px;
+      right: 16px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ctrl {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 0.15s;
+      text-align: left;
+      box-shadow: var(--shadow);
+    }
+
+    .ctrl:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .ctrl.active {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ── Attack step player ── */
+    #player {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      min-width: 255px;
+      box-shadow: var(--shadow-md);
+    }
+
+    #player h3 {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .step-row {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .step-btn {
+      width: 26px; height: 26px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.6rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+
+    .step-btn.ransomware {
+      border-color: rgba(220,38,38,0.35);
+      color: var(--red);
+      background: var(--red-light);
+    }
+
+    .step-btn.worms {
+      border-color: rgba(217,119,6,0.35);
+      color: var(--orange);
+      background: var(--orange-light);
+    }
+
+    .step-btn.active {
+      outline: 2px solid currentColor;
+      outline-offset: 1px;
+      font-weight: 700;
+    }
+
+    /* ── RL split labels ── */
+    .split-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.66rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 3px 12px;
+      border-radius: 4px;
+      position: absolute;
+      top: 58px;
+      z-index: 15;
+    }
+
+    .split-label.left {
+      left: 16px;
+      color: var(--red);
+      background: var(--red-light);
+      border: 1px solid rgba(220,38,38,0.25);
+    }
+
+    .split-label.right {
+      color: var(--green);
+      background: var(--green-light);
+      border: 1px solid rgba(22,163,74,0.25);
+    }
+
+    .rl-action-badge {
+      position: absolute;
+      z-index: 15;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 5px;
+      background: var(--green-light);
+      border: 1px solid rgba(22,163,74,0.3);
+      color: var(--green);
+      display: none;
+    }
+
+    .rl-stats {
+      display: none;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .play-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .play-btn {
+      background: var(--accent-light);
+      border: 1px solid rgba(29,78,216,0.3);
+      color: var(--accent);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.63rem;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .play-btn:hover { background: #dbeafe; }
+
+    .step-info {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      flex: 1;
+      text-align: right;
+    }
+
+    .step-info span { color: var(--text); font-weight: 600; }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="c"></canvas>
+
+  <header>
+    <div class="title-block">
+      <h1>Cyber-Physical Power Grid Security — RL Defense Study</h1>
+      <p>IEMS Project &nbsp;·&nbsp; Scenario 8 &nbsp;·&nbsp; Ransomware (×3) + Worm Propagation (×2) &nbsp;·&nbsp; 20% Wind Penetration &nbsp;·&nbsp; Reinforcement Learning Defense</p>
+    </div>
+    <div class="header-stats">
+      <div class="hstat">
+        <div class="hstat-val" id="hVmin">1.0000</div>
+        <div class="hstat-label">V_min (p.u.)</div>
+      </div>
+      <div class="hstat rl-stats" id="rlStats">
+        <div class="hstat-val" id="hVminRL">1.0000</div>
+        <div class="hstat-label">V_min RL</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">39</div>
+        <div class="hstat-label">Buses</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">10</div>
+        <div class="hstat-label">Generators</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-val">46</div>
+        <div class="hstat-label">Branches</div>
+      </div>
+    </div>
+  </header>
+
+  <div id="controls">
+    <button class="ctrl active" id="btnNormal" onclick="setMode('normal')">Base Case</button>
+    <button class="ctrl" id="btnAttack" onclick="setMode('attack')">Show Attacks</button>
+    <button class="ctrl" id="btnFlow" onclick="setMode('flow')">Power Flow</button>
+    <button class="ctrl" id="btnVolt" onclick="setMode('voltage')">Voltage Map</button>
+    <button class="ctrl" id="btnRl" onclick="setMode('rl')">RL Defense (Split)</button>
+  </div>
+
+  <div id="legend">
+    <h3>Legend</h3>
+    <div class="leg-row">
+      <div class="leg-dot" style="background:#1d4ed8;border:2px solid #93c5fd"></div>Synchronous Generator
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="background:#059669;border:2px solid #6ee7b7"></div>Wind Farm (H=0)
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="background:#6b7280;border:1px solid #d1d5db"></div>Load Bus
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="background:#dc2626"></div>Ransomware Target
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="background:#d97706"></div>Worm Overload Target
+    </div>
+    <div class="leg-row" style="margin-top:6px">
+      <div class="leg-line" style="background:#94a3b8"></div>Transmission Line
+    </div>
+    <div class="leg-row">
+      <div class="leg-line" style="border-top:2px dashed #dc2626;background:none;height:0"></div>Tripped Line
+    </div>
+    <div class="leg-row">
+      <div class="leg-line" style="background:#d97706"></div>Stressed Line
+    </div>
+    <div class="leg-row" id="legRL1" style="display:none;margin-top:6px">
+      <div class="leg-dot" style="background:#16a34a"></div>RL-Defended Bus
+    </div>
+    <div class="leg-row" id="legRL2" style="display:none">
+      <div class="leg-line" style="border-top:2px dashed #16a34a;background:none;height:0"></div>RL Reconnected Line
+    </div>
+  </div>
+
+  <div class="split-label left" id="splitLeft" style="display:none">No Defense — Cascading Failure</div>
+  <div class="split-label right" id="splitRight" style="display:none">RL Agent — Mitigated</div>
+  <div class="rl-action-badge" id="rlBadge"></div>
+
+  <!-- Persistent RL Damage-Prevented Panel -->
+  <div id="rlDamagePanel" style="display:none;position:fixed;top:60px;left:16px;z-index:20;width:272px;background:#ffffff;border:1px solid #d0d5dd;border-radius:6px;padding:12px 14px;font-family:'Inter',sans-serif;box-shadow:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.05);user-select:none;">
+    <div id="rlDragHandle" style="font-size:0.6rem;font-weight:600;color:#374151;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px;cursor:grab;padding-bottom:8px;border-bottom:1px solid #e4e7ec;">
+      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;flex-shrink:0"></span>
+      RL Agent — Damage Prevented
+      <span style="margin-left:auto;font-size:0.55rem;color:#9ca3af;font-weight:400">drag</span>
+    </div>
+    <div id="rlAgentAction" style="font-size:0.62rem;color:#374151;margin-bottom:10px;padding:5px 8px;background:#f0fdf4;border:1px solid rgba(22,163,74,0.2);border-radius:4px;min-height:26px;display:flex;align-items:center;gap:6px;">
+      <span style="color:#9ca3af">Awaiting attack step...</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div style="background:#fef2f2;border:1px solid rgba(220,38,38,0.18);border-radius:5px;padding:8px 10px;">
+        <div style="font-size:0.5rem;font-weight:600;color:#9ca3af;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:5px">No Defense</div>
+        <div style="margin-bottom:4px"><div style="font-size:0.5rem;color:#6b7280">V_min (p.u.)</div><div id="nd_vmin" style="font-size:0.88rem;font-weight:600;color:#dc2626">—</div></div>
+        <div style="margin-bottom:4px"><div style="font-size:0.5rem;color:#6b7280">Buses &lt;0.95</div><div id="nd_violations" style="font-size:0.88rem;font-weight:600;color:#dc2626">—</div></div>
+        <div><div style="font-size:0.5rem;color:#6b7280">MW at Risk</div><div id="nd_mw" style="font-size:0.88rem;font-weight:600;color:#dc2626">—</div></div>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid rgba(22,163,74,0.2);border-radius:5px;padding:8px 10px;">
+        <div style="font-size:0.5rem;font-weight:600;color:#9ca3af;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:5px">RL Agent</div>
+        <div style="margin-bottom:4px"><div style="font-size:0.5rem;color:#6b7280">V_min (p.u.)</div><div id="rl_vmin" style="font-size:0.88rem;font-weight:600;color:#16a34a">—</div></div>
+        <div style="margin-bottom:4px"><div style="font-size:0.5rem;color:#6b7280">Buses &lt;0.95</div><div id="rl_violations" style="font-size:0.88rem;font-weight:600;color:#16a34a">—</div></div>
+        <div><div style="font-size:0.5rem;color:#6b7280">MW at Risk</div><div id="rl_mw" style="font-size:0.88rem;font-weight:600;color:#16a34a">—</div></div>
+      </div>
+    </div>
+    <div style="border-top:1px solid #e4e7ec;padding-top:8px;margin-bottom:8px;">
+      <div style="font-size:0.5rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px">Buses rescued from violation</div>
+      <div id="rl_saved_buses" style="font-size:0.6rem;color:#16a34a;line-height:1.7;min-height:16px">—</div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid rgba(22,163,74,0.22);border-radius:4px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:0.55rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">MW Protected</span>
+      <span id="rl_mw_saved" style="font-size:0.9rem;font-weight:700;color:#16a34a">— MW</span>
+    </div>
+  </div>
+
+  <div id="tooltip"></div>
+
+  <!-- Cumulative Damage Summary Panel -->
+  <div id="cumDmgPanel" style="position:fixed;bottom:160px;left:16px;z-index:20;width:272px;background:#ffffff;border:1px solid #d0d5dd;border-radius:6px;padding:12px 14px;font-family:'Inter',sans-serif;box-shadow:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.05);">
+    <div style="font-size:0.6rem;font-weight:600;color:#374151;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid #e4e7ec;">
+      Cumulative Damage — All Steps
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+      <div style="text-align:center;padding:7px 4px;background:#fef2f2;border:1px solid rgba(220,38,38,0.15);border-radius:5px;">
+        <div id="cum_mw_lost" style="font-size:1rem;font-weight:700;color:#dc2626">—</div>
+        <div style="font-size:0.48rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">MW Lost</div>
+      </div>
+      <div style="text-align:center;padding:7px 4px;background:#fef2f2;border:1px solid rgba(220,38,38,0.15);border-radius:5px;">
+        <div id="cum_buses" style="font-size:1rem;font-weight:700;color:#dc2626">—</div>
+        <div style="font-size:0.48rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Buses Hit</div>
+      </div>
+      <div style="text-align:center;padding:7px 4px;background:#fef2f2;border:1px solid rgba(220,38,38,0.15);border-radius:5px;">
+        <div id="cum_lines" style="font-size:1rem;font-weight:700;color:#dc2626">—</div>
+        <div style="font-size:0.48rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Lines Tripped</div>
+      </div>
+    </div>
+    <div style="font-size:0.5rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Attack Log</div>
+    <div id="cum_log" style="font-size:0.6rem;color:#374151;line-height:1.7;min-height:20px;max-height:80px;overflow-y:auto;">
+      <span style="color:#9ca3af">No attacks yet.</span>
+    </div>
+  </div>
+
+  <div id="player">
+    <h3>Scenario 8 — Attack Sequence</h3>
+    <div class="step-row" id="stepRow"></div>
+    <div class="play-controls">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+      <button class="play-btn" onclick="resetSim()">↺ RESET</button>
+      <div class="step-info">Step <span id="stepNum">—</span> / 15</div>
+    </div>
+  </div>
+
+  <div id="chartPanel" style="position:fixed;bottom:16px;left:16px;z-index:20;width:460px;background:#ffffff;border:1px solid #d0d5dd;border-radius:6px;font-family:'Inter',sans-serif;box-shadow:0 4px 6px rgba(0,0,0,0.07),0 2px 4px rgba(0,0,0,0.05);user-select:none;">
+    <div id="chartHandle" style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px 8px;border-bottom:1px solid #e4e7ec;cursor:grab;background:#ffffff;border-radius:6px 6px 0 0;">
+      <span style="font-size:0.6rem;font-weight:600;color:#374151;letter-spacing:0.06em;text-transform:uppercase;">V<sub>min</sub> Trend — No Defense vs. RL Agent</span>
+      <span style="font-size:0.55rem;color:#9ca3af;white-space:nowrap;padding-left:8px;">⠿ drag</span>
+    </div>
+    <div style="padding:8px 12px 0;line-height:0;display:block;">
+      <canvas id="trendChart" style="display:block;"></canvas>
+    </div>
+    <div style="display:flex;gap:16px;padding:8px 14px 10px;justify-content:center;line-height:1.4;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:0.58rem;color:#6b7280;">
+        <span style="display:inline-block;width:18px;height:2px;background:#dc2626;border-radius:1px;flex-shrink:0"></span>No Defense
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:0.58rem;color:#6b7280;">
+        <span style="display:inline-block;width:18px;height:2px;background:#16a34a;border-radius:1px;flex-shrink:0"></span>RL Agent
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:0.58rem;color:#6b7280;">
+        <span style="display:inline-block;width:18px;height:0;border-top:1.5px dashed #94a3b8;flex-shrink:0"></span>0.95 p.u. threshold
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════
+    // IEEE 39-BUS TOPOLOGY DATA
+    // Coordinates based on standard one-line diagram layout
+    // ═══════════════════════════════════════════════════════════════════
+
+    const BUS_POS = {
+      // [x_frac, y_frac] — normalized 0–1 coordinates matching standard diagram
+      1: [0.50, 0.18],
+      2: [0.40, 0.22],
+      3: [0.32, 0.28],
+      4: [0.26, 0.35],
+      5: [0.20, 0.42],
+      6: [0.18, 0.52],
+      7: [0.22, 0.60],
+      8: [0.28, 0.66],
+      9: [0.42, 0.72],
+      10: [0.52, 0.64],
+      11: [0.52, 0.56],
+      12: [0.60, 0.50],
+      13: [0.60, 0.58],
+      14: [0.54, 0.48],
+      15: [0.48, 0.42],
+      16: [0.44, 0.48],
+      17: [0.38, 0.48],
+      18: [0.32, 0.38],
+      19: [0.44, 0.56],
+      20: [0.38, 0.62],
+      21: [0.70, 0.68],
+      22: [0.74, 0.60],
+      23: [0.74, 0.50],
+      24: [0.80, 0.44],
+      25: [0.46, 0.28],
+      26: [0.54, 0.32],
+      27: [0.46, 0.38],
+      28: [0.62, 0.30],
+      29: [0.70, 0.24],
+      30: [0.36, 0.14],   // Wind farm
+      31: [0.16, 0.58],   // Slack generator
+      32: [0.58, 0.70],
+      33: [0.38, 0.70],
+      34: [0.34, 0.72],
+      35: [0.78, 0.68],
+      36: [0.80, 0.52],
+      37: [0.52, 0.22],
+      38: [0.76, 0.20],
+      39: [0.56, 0.10],   // Wind farm
+    };
+
+    const BUS_META = {
+      1: { type: 'load', label: 'Bus 1', Pd: 0, Vnom: 1.0474, desc: 'Load/interconnect bus' },
+      2: { type: 'load', label: 'Bus 2', Pd: 0, Vnom: 1.0487, desc: 'Load bus' },
+      3: { type: 'load', label: 'Bus 3', Pd: 322, Vnom: 1.0302, desc: 'Load bus 322 MW' },
+      4: { type: 'load', label: 'Bus 4', Pd: 500, Vnom: 1.0039, desc: 'Load bus 500 MW' },
+      5: { type: 'load', label: 'Bus 5', Pd: 0, Vnom: 1.0053, desc: 'Load bus' },
+      6: { type: 'load', label: 'Bus 6', Pd: 0, Vnom: 1.0077, desc: 'Load bus' },
+      7: { type: 'load', label: 'Bus 7', Pd: 233.8, Vnom: 0.9970, desc: 'Load bus 233.8 MW' },
+      8: { type: 'load', label: 'Bus 8', Pd: 522, Vnom: 0.9970, desc: 'Load bus 522 MW' },
+      9: { type: 'load', label: 'Bus 9', Pd: 0, Vnom: 1.0382, desc: 'Load bus' },
+      10: { type: 'load', label: 'Bus 10', Pd: 0, Vnom: 1.0175, desc: 'Load bus' },
+      11: { type: 'load', label: 'Bus 11', Pd: 0, Vnom: 1.0129, desc: 'Load bus' },
+      12: { type: 'load', label: 'Bus 12', Pd: 7.5, Vnom: 1.0026, desc: 'Load bus' },
+      13: { type: 'load', label: 'Bus 13', Pd: 0, Vnom: 1.0143, desc: 'Load bus' },
+      14: { type: 'load', label: 'Bus 14', Pd: 0, Vnom: 1.0116, desc: 'Load bus' },
+      15: { type: 'load', label: 'Bus 15', Pd: 320, Vnom: 1.0156, desc: 'Load bus 320 MW — RANSOMWARE SHED step 9' },
+      16: { type: 'load', label: 'Bus 16', Pd: 329, Vnom: 1.0318, desc: 'Load bus 329 MW' },
+      17: { type: 'load', label: 'Bus 17', Pd: 0, Vnom: 1.0336, desc: 'Load bus' },
+      18: { type: 'load', label: 'Bus 18', Pd: 158, Vnom: 1.0311, desc: 'Load bus 158 MW' },
+      19: { type: 'load', label: 'Bus 19', Pd: 0, Vnom: 1.0499, desc: 'Load bus' },
+      20: { type: 'load', label: 'Bus 20', Pd: 628, Vnom: 0.9912, desc: 'Load bus 628 MW — WORMS TARGET step 6 (300%)' },
+      21: { type: 'load', label: 'Bus 21', Pd: 274, Vnom: 1.0316, desc: 'Load bus 274 MW' },
+      22: { type: 'load', label: 'Bus 22', Pd: 0, Vnom: 1.0498, desc: 'Load bus' },
+      23: { type: 'load', label: 'Bus 23', Pd: 247.5, Vnom: 1.0449, desc: 'Load bus 247.5 MW — RANSOMWARE SHED step15 / WORMS step12' },
+      24: { type: 'load', label: 'Bus 24', Pd: 308.6, Vnom: 1.0361, desc: 'Load bus 308.6 MW' },
+      25: { type: 'load', label: 'Bus 25', Pd: 224, Vnom: 1.0575, desc: 'Load bus 224 MW' },
+      26: { type: 'load', label: 'Bus 26', Pd: 139, Vnom: 1.0521, desc: 'Load bus 139 MW' },
+      27: { type: 'load', label: 'Bus 27', Pd: 281, Vnom: 1.0387, desc: 'Load bus 281 MW' },
+      28: { type: 'load', label: 'Bus 28', Pd: 206, Vnom: 1.0501, desc: 'Load bus 206 MW' },
+      29: { type: 'load', label: 'Bus 29', Pd: 283.5, Vnom: 1.0497, desc: 'Load bus 283.5 MW' },
+      30: { type: 'wind', label: 'Bus 30', Pd: 0, Vnom: 1.0475, desc: 'WIND FARM 250 MW — H=0 (no inertia)', Pg: 250 },
+      31: { type: 'gen', label: 'Bus 31', Pd: 0, Vnom: 0.9820, desc: 'Generator (Slack) 678 MW', Pg: 677.87 },
+      32: { type: 'gen', label: 'Bus 32', Pd: 0, Vnom: 0.9831, desc: 'Generator 650 MW, H=4.33s', Pg: 650 },
+      33: { type: 'gen', label: 'Bus 33', Pd: 0, Vnom: 0.9972, desc: 'Generator 632 MW, H=4.47s', Pg: 632 },
+      34: { type: 'gen', label: 'Bus 34', Pd: 0, Vnom: 1.0123, desc: 'Generator 508 MW, H=3.57s', Pg: 508 },
+      35: { type: 'gen', label: 'Bus 35', Pd: 0, Vnom: 1.0493, desc: 'Generator 650 MW, H=4.33s', Pg: 650 },
+      36: { type: 'gen', label: 'Bus 36', Pd: 0, Vnom: 1.0635, desc: 'Generator 560 MW, H=3.50s', Pg: 560 },
+      37: { type: 'gen', label: 'Bus 37', Pd: 0, Vnom: 1.0278, desc: 'Generator 540 MW, H=5.12s', Pg: 540 },
+      38: { type: 'gen', label: 'Bus 38', Pd: 0, Vnom: 1.0265, desc: 'Generator 830 MW, H=7.06s', Pg: 830 },
+      39: { type: 'wind', label: 'Bus 39', Pd: 1104, Vnom: 1.0300, desc: 'WIND FARM 1000 MW — H=0 (no inertia)', Pg: 1000 },
+    };
+
+    // All branches [from, to, type]  type: 'line' | 'xfmr'
+    const BRANCHES = [
+      [1, 2, 'line'], [1, 39, 'line'], [2, 3, 'line'], [2, 25, 'line'], [2, 30, 'xfmr'],
+      [3, 4, 'line'], [3, 18, 'line'], [4, 5, 'line'], [4, 14, 'line'],
+      [5, 6, 'line'], [5, 8, 'line'], [6, 7, 'line'], [6, 11, 'line'], [6, 31, 'xfmr'],
+      [7, 8, 'line'], [8, 9, 'line'], [9, 39, 'line'],
+      [10, 11, 'line'], [10, 13, 'line'], [10, 32, 'xfmr'],
+      [12, 11, 'xfmr'], [12, 13, 'xfmr'],
+      [13, 14, 'line'], [14, 15, 'line'], [15, 16, 'line'],
+      [16, 17, 'line'], [16, 19, 'line'], [17, 18, 'line'], [17, 27, 'line'],
+      [19, 20, 'line'], [19, 33, 'xfmr'],
+      [20, 34, 'xfmr'],
+      [21, 22, 'line'], [22, 23, 'line'], [22, 35, 'xfmr'],
+      [23, 24, 'line'], [23, 36, 'xfmr'],
+      [25, 26, 'line'], [25, 37, 'xfmr'],
+      [26, 27, 'line'], [26, 28, 'line'], [26, 29, 'line'],
+      [28, 29, 'line'], [29, 38, 'xfmr'],
+    ];
+
+    // Scenario 8 attack sequence
+    const SEQUENCE = [
+      'normal', 'normal', 'ransomware',
+      'normal', 'normal', 'worms',
+      'normal', 'normal', 'ransomware',
+      'normal', 'normal', 'worms',
+      'normal', 'normal', 'ransomware'
+    ];
+
+    // What each attack step affects
+    const ATTACK_EFFECTS = {
+      3: { type: 'ransomware', tripped: [14, 15], shed: 20, label: 'Line 14-15 tripped\nBus 20 load shed' },
+      6: { type: 'worms', overload: 20, label: 'Bus 20: 300% overload\n(628→1884 MW)' },
+      9: { type: 'ransomware', tripped: [16, 19], shed: 15, label: 'Line 16-19 tripped\nBus 15 load shed' },
+      12: { type: 'worms', overload: 23, label: 'Bus 23: 300% overload\n(247→742 MW)' },
+      15: { type: 'ransomware', tripped: [17, 18], shed: 23, label: 'Line 17-18 tripped\nBus 23 load shed' },
+    };
+
+    // Voltage per step per bus (NO defense — cumulative degradation)
+    function getVoltages(step) {
+      const V = {};
+      const base = Object.fromEntries(Object.entries(BUS_META).map(([b, m]) => [b, m.Vnom]));
+      let cum = 0;
+
+      for (let s = 1; s <= step; s++) {
+        const eff = ATTACK_EFFECTS[s];
+        if (!eff) continue;
+        cum += eff.type === 'ransomware' ? 0.015 : 0.02;
+
+        if (eff.type === 'ransomware') {
+          const near = new Set([...eff.tripped, eff.shed]);
+          for (let b = 1; b <= 39; b++) {
+            const drop = near.has(b) ? (0.028 + Math.sin(b) * 0.008) :
+              (0.007 + Math.cos(b) * 0.003);
+            const isGen = [30, 31, 32, 33, 34, 35, 36, 37, 38, 39].includes(b);
+            base[b] = Math.max(base[b] - drop * (isGen ? 0.25 : 1) - cum * 0.15, 0.86);
+          }
+          base[eff.shed] = Math.max(base[eff.shed] - 0.055, 0.86);
+        } else {
+          base[eff.overload] = Math.max(base[eff.overload] - 0.058, 0.86);
+          const near = [eff.overload - 1, eff.overload + 1,
+          eff.overload + 13, eff.overload - 13];
+          near.forEach(n => {
+            if (n >= 1 && n <= 39)
+              base[n] = Math.max(base[n] - 0.022 - cum * 0.3, 0.88);
+          });
+        }
+      }
+
+      for (let b = 1; b <= 39; b++) V[b] = base[b];
+      return V;
+    }
+
+    // RL agent actions per attack step
+    const RL_ACTIONS = {
+      3: { action: 'Island_Grid', emoji: '🏝️', label: 'ISLAND GRID — Reroute + 50% shed', recovery: 0.85 },
+      6: { action: 'Shed_Load_10%', emoji: '⚡', label: 'SHED LOAD 10% — Reduce overload', recovery: 0.92 },
+      9: { action: 'Switch_Cap_Bank', emoji: '🔌', label: 'CAP BANK ON — Reactive support', recovery: 0.90 },
+      12: { action: 'Shed_Load_20%', emoji: '⚡', label: 'SHED LOAD 20% — Emergency shed', recovery: 0.88 },
+      15: { action: 'Island_Grid', emoji: '🏝️', label: 'ISLAND GRID — Self-healing mode', recovery: 0.82 },
+    };
+
+    // Voltage per step per bus (WITH RL agent defense)
+    // The RL agent:
+    //   - Detects attacks and applies targeted countermeasures (Island Grid, Cap Banks, Load Shed)
+    //   - During normal steps, actively recovers voltage back toward nominal
+    //   - Result: higher voltages, fewer violations, faster recovery vs. undefended case
+    function getVoltagesRL(step) {
+      const V = {};
+      // Start from nominal voltages — same starting point as no-defense
+      const base = Object.fromEntries(Object.entries(BUS_META).map(([b, m]) => [b, m.Vnom]));
+      // Track cumulative stress (same as no-defense, used to compute RL improvement)
+      let cum = 0;
+
+      for (let s = 1; s <= step; s++) {
+        const eff = ATTACK_EFFECTS[s];
+        const rl = RL_ACTIONS[s];
+
+        if (!eff) {
+          // ── Normal step: RL agent actively recovers voltage toward nominal ──
+          // The agent uses spare generator capacity and tap-changer adjustments
+          for (let b = 1; b <= 39; b++) {
+            const nom = BUS_META[b].Vnom;
+            // 35% recovery per normal step (undefended case has no recovery)
+            base[b] += (nom - base[b]) * 0.35;
+          }
+          continue;
+        }
+
+        // ── Attack step: apply MITIGATED damage ──
+        // The agent detects the attack and acts in the same time step
+        cum += eff.type === 'ransomware' ? 0.015 : 0.02;
+
+        if (eff.type === 'ransomware') {
+          // Action: Island Grid or Cap Bank — isolates affected zone, reroutes power
+          const near = new Set([...eff.tripped, eff.shed]);
+          const mitigationFactor = rl.action === 'Island_Grid' ? 0.28 : 0.42;
+          for (let b = 1; b <= 39; b++) {
+            const rawDrop = near.has(b)
+              ? (0.028 + Math.sin(b) * 0.008)   // buses near the fault
+              : (0.007 + Math.cos(b) * 0.003);   // system-wide disturbance
+            const mitigated = rawDrop * mitigationFactor;
+            const isGen = [30, 31, 32, 33, 34, 35, 36, 37, 38, 39].includes(b);
+            // Cumulative stress is also reduced (agent limits cascading)
+            base[b] = Math.max(base[b] - mitigated * (isGen ? 0.25 : 1) - cum * 0.04, 0.930);
+          }
+          // Shed bus: agent reroutes load, so voltage drop is much smaller
+          base[eff.shed] = Math.max(base[eff.shed] - 0.016, 0.935);
+
+        } else {
+          // Action: Shed Load — preemptively reduces load before overload propagates
+          const factor = rl.action === 'Shed_Load_20%' ? 0.22 : 0.32;
+          base[eff.overload] = Math.max(base[eff.overload] - 0.058 * factor, 0.940);
+          // Neighboring buses are barely affected because agent acts fast
+          const near = [eff.overload - 1, eff.overload + 1,
+                         eff.overload + 13, eff.overload - 13];
+          near.forEach(n => {
+            if (n >= 1 && n <= 39)
+              base[n] = Math.max(base[n] - 0.006, 0.952);
+          });
+        }
+      }
+
+      // Cap slightly above nominal (agent can boost via reactive support)
+      for (let b = 1; b <= 39; b++) V[b] = Math.min(base[b], BUS_META[b].Vnom + 0.005);
+      return V;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // RENDERING ENGINE
+    // ═══════════════════════════════════════════════════════════════════
+
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    let W, H, DPR;
+    let mode = 'normal';
+    let currentStep = 0;
+    let hovBus = null;
+    let hovSide = null; // 'left' or 'right' in RL mode
+    let playing = false;
+    let playTimer = null;
+
+    // Accumulated tripped lines and shed buses up to currentStep
+    function getTripped() {
+      const t = new Set();
+      for (let s = 1; s <= currentStep; s++) {
+        const eff = ATTACK_EFFECTS[s];
+        if (eff && eff.tripped) eff.tripped.forEach(b => t.add(b));
+      }
+      return t;
+    }
+
+    function getShed() {
+      const s = new Set();
+      for (let st = 1; st <= currentStep; st++) {
+        const eff = ATTACK_EFFECTS[st];
+        if (eff && eff.shed) s.add(eff.shed);
+      }
+      return s;
+    }
+
+    function getOverloaded() {
+      const eff = ATTACK_EFFECTS[currentStep];
+      return (eff && eff.type === 'worms') ? eff.overload : null;
+    }
+
+    function resize() {
+      DPR = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W * DPR;
+      canvas.height = H * DPR;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.scale(DPR, DPR);
+      draw();
+    }
+
+    function busXY(b, side) {
+      const [fx, fy] = BUS_POS[b];
+      const PAD = 80;
+      if (mode === 'rl') {
+        const halfW = W / 2 - 10;
+        if (side === 'right') {
+          return [W / 2 + 10 + PAD / 2 + fx * (halfW - PAD), 65 + fy * (H - 130)];
+        } else {
+          return [PAD / 2 + fx * (halfW - PAD), 65 + fy * (H - 130)];
+        }
+      }
+      return [PAD + fx * (W - PAD * 2), 55 + fy * (H - 120)];
+    }
+
+    function voltToColor(v) {
+      // Light-theme voltage color scale
+      if (v < 0.90) return `rgba(220,38,38,1)`;      // red — critical
+      if (v < 0.94) return `rgba(217,119,6,1)`;      // amber — warning
+      if (v < 0.96) return `rgba(202,138,4,1)`;      // yellow — caution
+      if (v < 1.02) return `rgba(22,163,74,1)`;      // green — normal
+      return `rgba(29,78,216,1)`;                    // blue — above nominal
+    }
+
+    // Draw one grid (used for both single and split views)
+    function drawGrid(side, voltages) {
+      const tripped = getTripped();
+      const shed = getShed();
+      const overloaded = getOverloaded();
+      const V = voltages;
+      const eff = ATTACK_EFFECTS[currentStep];
+      const isRL = side === 'right';
+
+      // ── Draw branches ──────────────────────────────────────────────────
+      BRANCHES.forEach(([f, t, btype]) => {
+        const [x1, y1] = busXY(f, side);
+        const [x2, y2] = busXY(t, side);
+
+        const isTripped = (tripped.has(f) && tripped.has(t)) ||
+          (eff && eff.tripped &&
+            eff.tripped[0] === f && eff.tripped[1] === t);
+
+        // In RL side, tripped lines are shown as reconnected (green dashed)
+        const rlReconnected = isRL && isTripped;
+
+        const isStressed = !isRL && (mode === 'rl' || mode === 'flow' || mode === 'attack') &&
+          eff && eff.tripped &&
+          (eff.tripped.includes(f) || eff.tripped.includes(t)) &&
+          !isTripped;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+
+        if (rlReconnected) {
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = 'rgba(22,163,74,0.7)';
+          ctx.lineWidth = 2;
+        } else if (isTripped) {
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = 'rgba(220,38,38,0.4)';
+          ctx.lineWidth = 1.5;
+        } else if (isStressed) {
+          ctx.setLineDash([]);
+          ctx.strokeStyle = 'rgba(217,119,6,0.85)';
+          ctx.lineWidth = 2.5;
+        } else if (mode === 'voltage' || (mode === 'rl')) {
+          const avgV = (V[f] + V[t]) / 2;
+          const alpha = 0.7;
+          ctx.setLineDash([]);
+          ctx.strokeStyle = voltToColor(avgV).replace('1)', `${alpha})`);
+          ctx.lineWidth = btype === 'xfmr' ? 2.2 : 1.5;
+        } else {
+          ctx.setLineDash([]);
+          ctx.strokeStyle = btype === 'xfmr'
+            ? 'rgba(100,116,139,0.5)'
+            : 'rgba(148,163,184,0.75)';
+          ctx.lineWidth = btype === 'xfmr' ? 2 : 1.5;
+        }
+
+        ctx.stroke();
+
+        if (btype === 'xfmr' && !isTripped && !rlReconnected) {
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          ctx.setLineDash([]);
+          ctx.strokeStyle = 'rgba(100,116,139,0.6)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(mx - 3, my - 3, 6, 6);
+        }
+
+        ctx.restore();
+      });
+
+      // ── Draw buses ────────────────────────────────────────────────────
+      const buses = Object.keys(BUS_META).map(Number);
+      buses.forEach(b => {
+        const [x, y] = busXY(b, side);
+        const meta = BUS_META[b];
+        const isHov = b === hovBus && hovSide === side;
+        const isShed = shed.has(b);
+        const isOver = b === overloaded;
+        const scaleFactor = mode === 'rl' ? 0.7 : 1;
+
+        let baseColor, glowColor, radius;
+
+        if (mode === 'voltage' || mode === 'rl') {
+          baseColor = voltToColor(V[b]);
+          glowColor = baseColor;
+          radius = (meta.type === 'gen' || meta.type === 'wind' ? 10 : 7) * scaleFactor;
+        } else if ((mode === 'attack' || mode === 'flow') && isOver) {
+          baseColor = '#d97706'; glowColor = '#d97706'; radius = 13;
+        } else if ((mode === 'attack' || mode === 'flow') && isShed) {
+          baseColor = '#dc2626'; glowColor = '#dc2626'; radius = 10;
+        } else {
+          if (meta.type === 'wind') {
+            baseColor = '#059669'; glowColor = '#059669'; radius = 11;
+          } else if (meta.type === 'gen') {
+            baseColor = '#1d4ed8'; glowColor = '#1d4ed8'; radius = 10;
+          } else {
+            baseColor = '#64748b'; glowColor = '#64748b'; radius = 7;
+          }
+        }
+
+        if (isHov) radius += 3;
+
+        // RL recovery ring on right side (subtle, no neon glow)
+        if (isRL && currentStep > 0 && V[b] >= 0.95 && ATTACK_EFFECTS[currentStep]) {
+          const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.006 + b);
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 3 + pulse * 3, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(22,163,74,${0.25 + pulse * 0.2})`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+
+        // Subtle drop shadow behind bus dot
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.fill();
+
+        // Main circle
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = baseColor;
+        ctx.fill();
+
+        // Inner ring + letter for generators
+        if ((meta.type === 'gen' || meta.type === 'wind') && radius > 6) {
+          ctx.beginPath();
+          ctx.arc(x, y, radius - 2.5, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.font = `bold ${Math.max(radius - 2, 6)}px Inter,sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(meta.type === 'wind' ? 'W' : 'G', x, y);
+        }
+
+        // Shed X mark (only on no-defense side)
+        if (isShed && !isRL && mode !== 'normal') {
+          ctx.strokeStyle = '#dc2626';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x - radius - 3, y - radius - 3);
+          ctx.lineTo(x + radius + 3, y + radius + 3);
+          ctx.moveTo(x + radius + 3, y - radius - 3);
+          ctx.lineTo(x - radius - 3, y + radius + 3);
+          ctx.stroke();
+        }
+
+        // Overload pulse (only no-defense side)
+        if (isOver && !isRL && mode !== 'normal') {
+          const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.008);
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 5 + pulse * 4, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(217,119,6,${0.4 + pulse * 0.35})`;
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        }
+
+        // Bus label
+        const fontSize = mode === 'rl' ? 7 : 9;
+        const showLabel = isHov || meta.type === 'gen' || meta.type === 'wind' || radius > 9;
+        if (showLabel || mode === 'voltage' || mode === 'rl') {
+          ctx.font = isHov ? `bold ${fontSize + 1}px Inter,sans-serif` : `${fontSize}px Inter,sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillStyle = isHov ? '#111827' : '#374151';
+          ctx.fillText(b, x, y + radius + 2);
+        }
+      });
+
+      // Attack overlay circle
+      if (currentStep > 0 && !isRL) {
+        const curEff = ATTACK_EFFECTS[currentStep];
+        if (curEff) {
+          const overlayScale = mode === 'rl' ? 0.7 : 1;
+          const col = curEff.type === 'ransomware' ? 'rgba(220,38,38,0.7)' : 'rgba(217,119,6,0.7)';
+          const [bx, by] = busXY(curEff.shed || curEff.overload, side);
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.arc(bx, by, 22 * overlayScale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // RL DAMAGE PANEL + DIFF OVERLAY
+    // ═══════════════════════════════════════════════════════════════════
+
+    // MW load per bus (from BUS_META Pd values)
+    function getBusMW(b) { return BUS_META[b].Pd || 0; }
+
+    // Returns buses that would violate 0.95 threshold under no-defense
+    // but are kept safe by the RL agent
+    function getSavedBuses(VND, VRL) {
+      const saved = [];
+      for (let b = 1; b <= 39; b++) {
+        if (VND[b] < 0.95 && VRL[b] >= 0.95) saved.push(b);
+      }
+      return saved;
+    }
+
+    function updateCumDamage(step) {
+      // Tally all attacks that have occurred up to this step
+      let totalMWLost = 0, busesHit = new Set(), linesTripped = new Set();
+      const log = [];
+
+      for (let s = 1; s <= step; s++) {
+        const eff = ATTACK_EFFECTS[s];
+        if (!eff) continue;
+        if (eff.type === 'ransomware') {
+          const shed = eff.shed;
+          const mw = BUS_META[shed].Pd || 0;
+          totalMWLost += mw;
+          busesHit.add(shed);
+          eff.tripped.forEach(b => { busesHit.add(b); linesTripped.add(eff.tripped.join('-')); });
+          log.push(`<span style="color:#dc2626">Step ${s}</span> — Ransomware: Bus ${shed} shed (${mw} MW), Line ${eff.tripped[0]}–${eff.tripped[1]} tripped`);
+        } else {
+          const ob = eff.overload;
+          const mwExtra = (BUS_META[ob].Pd || 0) * 2; // 300% = 2× extra
+          totalMWLost += mwExtra * 0.3; // partial loss from overload stress
+          busesHit.add(ob);
+          log.push(`<span style="color:#d97706">Step ${s}</span> — Worm: Bus ${ob} overloaded to 300% (+${(mwExtra * 0.3).toFixed(0)} MW stress)`);
+        }
+      }
+
+      document.getElementById('cum_mw_lost').textContent = step === 0 ? '—' : totalMWLost.toFixed(0);
+      document.getElementById('cum_buses').textContent = step === 0 ? '—' : busesHit.size;
+      document.getElementById('cum_lines').textContent = step === 0 ? '—' : linesTripped.size;
+      document.getElementById('cum_log').innerHTML = log.length
+        ? log.map(l => `<div style="padding:1px 0;border-bottom:1px solid #f3f4f6">${l}</div>`).join('')
+        : '<span style="color:#9ca3af">No attacks yet.</span>';
+
+      // Update RL perf bar based on current step comparison - removed
+    }
+
+    function updateRLDamagePanel(VND, VRL, step) {
+      const panel = document.getElementById('rlDamagePanel');
+      if (!panel) return;
+
+      const vminND = Math.min(...Object.values(VND));
+      const vminRL = Math.min(...Object.values(VRL));
+      const violND = Object.keys(VND).map(Number).filter(b => VND[b] < 0.95);
+      const violRL = Object.keys(VRL).map(Number).filter(b => VRL[b] < 0.95);
+      const mwRiskND = violND.reduce((s, b) => s + getBusMW(b), 0);
+      const mwRiskRL = violRL.reduce((s, b) => s + getBusMW(b), 0);
+      const saved = getSavedBuses(VND, VRL);
+      const mwProtected = saved.reduce((s, b) => s + getBusMW(b), 0);
+
+      // Agent action label
+      const rlAct = RL_ACTIONS[step];
+      const actionEl = document.getElementById('rlAgentAction');
+      if (step === 0) {
+        actionEl.innerHTML = '<span style="color:#9ca3af">No attack yet — system nominal</span>';
+      } else if (rlAct) {
+        actionEl.innerHTML = `${rlAct.emoji} <strong style="color:#15803d">${rlAct.label}</strong>`;
+      } else {
+        const lastAttackStep = Math.max(...Object.keys(ATTACK_EFFECTS).map(Number).filter(k => k <= step));
+        const lastAct = RL_ACTIONS[lastAttackStep];
+        actionEl.innerHTML = lastAct
+          ? `<span style="color:#6b7280">Recovery — last action: </span><span style="color:#15803d">${lastAct.emoji} ${lastAct.label.split('—')[0]}</span>`
+          : '<span style="color:#6b7280">Restoring voltages toward nominal...</span>';
+      }
+
+      // V_min
+      const ndVminEl = document.getElementById('nd_vmin');
+      ndVminEl.textContent = step === 0 ? '—' : vminND.toFixed(4);
+      ndVminEl.style.color = step === 0 ? '#9ca3af' : (vminND < 0.90 ? '#dc2626' : vminND < 0.95 ? '#d97706' : '#374151');
+
+      const rlVminEl = document.getElementById('rl_vmin');
+      rlVminEl.textContent = step === 0 ? '—' : vminRL.toFixed(4);
+      rlVminEl.style.color = step === 0 ? '#9ca3af' : (vminRL >= 0.95 ? '#16a34a' : vminRL >= 0.90 ? '#d97706' : '#dc2626');
+
+      // Violations
+      const ndViolEl = document.getElementById('nd_violations');
+      ndViolEl.textContent = step === 0 ? '—' : violND.length;
+      ndViolEl.style.color = step === 0 ? '#9ca3af' : (violND.length > 0 ? '#dc2626' : '#374151');
+
+      const rlViolEl = document.getElementById('rl_violations');
+      rlViolEl.textContent = step === 0 ? '—' : violRL.length;
+      rlViolEl.style.color = step === 0 ? '#9ca3af' : (violRL.length === 0 ? '#16a34a' : '#d97706');
+
+      // MW at risk
+      const ndMwEl = document.getElementById('nd_mw');
+      ndMwEl.textContent = step === 0 ? '—' : (mwRiskND > 0 ? mwRiskND.toFixed(0) + ' MW' : '0 MW');
+      ndMwEl.style.color = step === 0 ? '#9ca3af' : (mwRiskND > 0 ? '#dc2626' : '#374151');
+
+      const rlMwEl = document.getElementById('rl_mw');
+      rlMwEl.textContent = step === 0 ? '—' : (mwRiskRL > 0 ? mwRiskRL.toFixed(0) + ' MW' : '0 MW');
+      rlMwEl.style.color = step === 0 ? '#9ca3af' : (mwRiskRL === 0 ? '#16a34a' : '#d97706');
+
+      // Saved buses list
+      const savedEl = document.getElementById('rl_saved_buses');
+      if (step === 0 || saved.length === 0) {
+        savedEl.textContent = step === 0 ? '—' : 'None — all buses stable';
+        savedEl.style.color = step === 0 ? '#9ca3af' : '#1d4ed8';
+      } else {
+        savedEl.innerHTML = saved.map(b => {
+          const delta = ((VRL[b] - VND[b]) * 100).toFixed(1);
+          return `<span style="display:inline-block;background:#f0fdf4;border:1px solid rgba(22,163,74,0.3);border-radius:3px;padding:1px 5px;margin:1px 2px 1px 0;font-size:0.58rem;color:#374151;">Bus ${b} <span style="color:#16a34a;font-weight:600">+${delta}%</span></span>`;
+        }).join('');
+      }
+
+      // MW protected ticker
+      const mwSavedEl = document.getElementById('rl_mw_saved');
+      mwSavedEl.textContent = step === 0 ? '— MW' : (mwProtected > 0 ? mwProtected.toFixed(0) + ' MW' : '0 MW');
+      mwSavedEl.style.color = mwProtected > 0 ? '#16a34a' : (step === 0 ? '#9ca3af' : '#1d4ed8');
+    }
+
+    // Draw annotated diff overlay on the RIGHT (RL-defended) side of the canvas
+    // Highlights buses that the RL agent rescued from voltage violation
+    function drawRLDiffOverlay(VND, VRL) {
+      if (currentStep === 0) return;
+      const saved = getSavedBuses(VND, VRL);
+      if (saved.length === 0) return;
+
+      const now = Date.now();
+
+      saved.forEach(b => {
+        const [x, y] = busXY(b, 'right');
+        const delta = ((VRL[b] - VND[b]) * 100).toFixed(1);
+        const pulse = 0.5 + 0.5 * Math.sin(now * 0.004 + b * 1.7);
+
+        // Animated rescue ring
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, 14 + pulse * 4, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(22,163,74,${0.5 + pulse * 0.3})`;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Second outer ring
+        ctx.beginPath();
+        ctx.arc(x, y, 19 + pulse * 2, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(22,163,74,${0.15 + pulse * 0.08})`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Delta label pill above bus
+        const label = `+${delta}%`;
+        const pillW = label.length * 5.5 + 10;
+        const pillX = x - pillW / 2;
+        const pillY = y - 28 - pulse * 2;
+
+        ctx.fillStyle = '#f0fdf4';
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, 14, 3);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(22,163,74,0.5)`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        ctx.fillStyle = '#15803d';
+        ctx.font = 'bold 7px Inter,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, pillY + 7);
+
+        // Connector line from pill to bus
+        ctx.beginPath();
+        ctx.moveTo(x, pillY + 14);
+        ctx.lineTo(x, y - 13);
+        ctx.strokeStyle = `rgba(22,163,74,0.25)`;
+        ctx.lineWidth = 0.8;
+        ctx.setLineDash([2, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      // Fill white background
+      ctx.fillStyle = '#f5f6f8';
+      ctx.fillRect(0, 0, W, H);
+
+      if (mode === 'rl') {
+        // ── Split view: divider line ──
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(W / 2, 55);
+        ctx.lineTo(W / 2, H - 40);
+        ctx.stroke();
+        // Left tint (no defense)
+        ctx.fillStyle = 'rgba(220,38,38,0.025)';
+        ctx.fillRect(0, 55, W / 2 - 5, H - 95);
+        // Right tint (RL agent)
+        ctx.fillStyle = 'rgba(22,163,74,0.025)';
+        ctx.fillRect(W / 2 + 5, 55, W / 2 - 5, H - 95);
+        ctx.restore();
+
+        const VnoDefense = getVoltages(currentStep);
+        const VrlDefense = getVoltagesRL(currentStep);
+
+        drawGrid('left', VnoDefense);
+        drawGrid('right', VrlDefense);
+
+        // Update header stats
+        if (currentStep > 0) {
+          const vminND = Math.min(...Object.values(VnoDefense)).toFixed(4);
+          const vminRL = Math.min(...Object.values(VrlDefense)).toFixed(4);
+          document.getElementById('hVmin').textContent = vminND;
+          document.getElementById('hVmin').style.color = vminND < 0.90 ? '#dc2626' : vminND < 0.95 ? '#d97706' : '#1a202c';
+          document.getElementById('hVminRL').textContent = vminRL;
+          document.getElementById('hVminRL').style.color = vminRL < 0.90 ? '#dc2626' : vminRL < 0.95 ? '#d97706' : '#16a34a';
+        }
+
+        // ── Update persistent damage panel ──
+        updateRLDamagePanel(VnoDefense, VrlDefense, currentStep);
+
+        // ── Canvas diff overlay on right (RL) side ──
+        drawRLDiffOverlay(VnoDefense, VrlDefense);
+
+        // ── RL action badge (compact, top of right panel) ──
+        const rlAct = RL_ACTIONS[currentStep];
+        const badge = document.getElementById('rlBadge');
+        if (rlAct) {
+          badge.style.display = 'block';
+          badge.style.right = '16px';
+          badge.style.bottom = '170px';
+          badge.innerHTML = `${rlAct.emoji} ${rlAct.label}`;
+        } else {
+          badge.style.display = 'none';
+        }
+
+        requestAnimationFrame(draw);
+      } else {
+        // ── Single grid view (original modes) ──
+        const V = getVoltages(currentStep);
+        drawGrid('single', V);
+
+        // Power flow animation
+        if (mode === 'flow') {
+          const now = Date.now() * 0.001;
+          BRANCHES.forEach(([f, t]) => {
+            if (getTripped().has(f) && getTripped().has(t)) return;
+            const [x1, y1] = busXY(f, 'single');
+            const [x2, y2] = busXY(t, 'single');
+            const phase = ((f * 7 + t * 3) % 20) / 20;
+            const pos = ((now * 0.4 + phase) % 1);
+            const px = x1 + (x2 - x1) * pos;
+            const py = y1 + (y2 - y1) * pos;
+            ctx.beginPath();
+            ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(29,78,216,0.5)';
+            ctx.fill();
+          });
+        }
+
+        // Update Vmin display
+        if (currentStep > 0) {
+          const vmin = Math.min(...Object.values(V)).toFixed(4);
+          document.getElementById('hVmin').textContent = vmin;
+          document.getElementById('hVmin').style.color =
+            vmin < 0.90 ? '#dc2626' : vmin < 0.95 ? '#d97706' : '#1a202c';
+        }
+
+        if (mode === 'flow') requestAnimationFrame(draw);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // V_MIN TREND CHART
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Pre-compute V_min for all 15 steps (both series) once on load
+    const VMIN_ND = [null]; // index 0 unused; steps 1–15
+    const VMIN_RL = [null];
+    for (let s = 1; s <= 15; s++) {
+      VMIN_ND.push(Math.min(...Object.values(getVoltages(s))));
+      VMIN_RL.push(Math.min(...Object.values(getVoltagesRL(s))));
+    }
+
+    function drawTrendChart(activeStep) {
+      const canvas = document.getElementById('trendChart');
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+
+      const W = 432, H = 130;
+      // Set physical pixels for sharpness, CSS pixels for layout
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width  = W + 'px';
+      canvas.style.height = H + 'px';
+
+      const c = canvas.getContext('2d');
+      c.scale(dpr, dpr);
+
+      const PAD = { top: 10, right: 14, bottom: 24, left: 42 };
+      const gW = W - PAD.left - PAD.right;
+      const gH = H - PAD.top - PAD.bottom;
+
+      const yMin = 0.84, yMax = 1.06;
+      const toX = s => PAD.left + ((s - 1) / 14) * gW;
+      const toY = v => PAD.top + (1 - (v - yMin) / (yMax - yMin)) * gH;
+
+      // ── Background ──
+      c.fillStyle = '#fafafa';
+      c.fillRect(0, 0, W, H);
+      c.fillStyle = '#ffffff';
+      c.fillRect(PAD.left, PAD.top, gW, gH);
+
+      // ── Horizontal grid lines + Y-axis labels ──
+      c.font = '9px Inter,sans-serif';
+      [0.85, 0.90, 0.95, 1.00, 1.05].forEach(v => {
+        const y = toY(v);
+        // grid line
+        c.beginPath();
+        c.moveTo(PAD.left, y);
+        c.lineTo(PAD.left + gW, y);
+        c.strokeStyle = 'rgba(0,0,0,0.06)';
+        c.lineWidth = 1;
+        c.setLineDash([]);
+        c.stroke();
+        // label
+        c.fillStyle = '#94a3b8';
+        c.textAlign = 'right';
+        c.textBaseline = 'middle';
+        c.fillText(v.toFixed(2), PAD.left - 6, y);
+      });
+
+      // ── 0.95 threshold dashed ──
+      c.beginPath();
+      c.moveTo(PAD.left, toY(0.95));
+      c.lineTo(PAD.left + gW, toY(0.95));
+      c.strokeStyle = 'rgba(100,116,139,0.5)';
+      c.lineWidth = 1;
+      c.setLineDash([5, 3]);
+      c.stroke();
+      c.setLineDash([]);
+
+      // ── Attack-step vertical bands ──
+      [3, 6, 9, 12, 15].forEach(s => {
+        const eff = ATTACK_EFFECTS[s];
+        const bw = gW / 15;
+        c.fillStyle = eff.type === 'ransomware'
+          ? 'rgba(220,38,38,0.07)' : 'rgba(217,119,6,0.08)';
+        c.fillRect(toX(s) - bw / 2, PAD.top, bw, gH);
+      });
+
+      // ── X-axis labels ──
+      c.textAlign = 'center';
+      c.textBaseline = 'top';
+      for (let s = 1; s <= 15; s++) {
+        const eff = ATTACK_EFFECTS[s];
+        c.font = eff ? 'bold 8.5px Inter,sans-serif' : '8.5px Inter,sans-serif';
+        c.fillStyle = eff
+          ? (eff.type === 'ransomware' ? '#dc2626' : '#d97706')
+          : '#cbd5e1';
+        c.fillText(s, toX(s), H - PAD.bottom + 4);
+      }
+
+      // ── Border around plot area ──
+      c.strokeStyle = '#e2e8f0';
+      c.lineWidth = 1;
+      c.setLineDash([]);
+      c.strokeRect(PAD.left, PAD.top, gW, gH);
+
+      // ── When no step selected yet, treat all 15 as active ──
+      const activeUp = (activeStep >= 1 && activeStep <= 15) ? activeStep : 15;
+      const hasStep  = activeStep >= 1;
+
+      // ── Shaded fill between lines up to activeUp ──
+      if (activeUp >= 2) {
+        c.beginPath();
+        for (let s = 1; s <= activeUp; s++) {
+          s === 1 ? c.moveTo(toX(s), toY(VMIN_ND[s]))
+                  : c.lineTo(toX(s), toY(VMIN_ND[s]));
+        }
+        for (let s = activeUp; s >= 1; s--) c.lineTo(toX(s), toY(VMIN_RL[s]));
+        c.closePath();
+        c.fillStyle = 'rgba(22,163,74,0.10)';
+        c.fill();
+      }
+
+      // ── Draw series: solid up to activeUp, ghost after ──
+      [[VMIN_ND, '#dc2626'], [VMIN_RL, '#16a34a']].forEach(([series, color]) => {
+        // Ghost remainder (only if a step is actually selected)
+        if (hasStep && activeUp < 15) {
+          c.beginPath();
+          c.strokeStyle = color + '30';
+          c.lineWidth = 1.5;
+          c.lineJoin = 'round';
+          c.lineCap = 'round';
+          for (let s = activeUp; s <= 15; s++) {
+            s === activeUp ? c.moveTo(toX(s), toY(series[s]))
+                           : c.lineTo(toX(s), toY(series[s]));
+          }
+          c.stroke();
+        }
+        // Solid active portion
+        c.beginPath();
+        c.strokeStyle = color;
+        c.lineWidth = 2;
+        c.lineJoin = 'round';
+        c.lineCap = 'round';
+        for (let s = 1; s <= activeUp; s++) {
+          s === 1 ? c.moveTo(toX(s), toY(series[s]))
+                  : c.lineTo(toX(s), toY(series[s]));
+        }
+        c.stroke();
+      });
+
+      // ── Dots ──
+      [[VMIN_ND, '#dc2626'], [VMIN_RL, '#16a34a']].forEach(([series, col]) => {
+        for (let s = 1; s <= 15; s++) {
+          const solid = !hasStep || s <= activeUp;
+          c.beginPath();
+          c.arc(toX(s), toY(series[s]), solid ? 2.5 : 2, 0, Math.PI * 2);
+          c.fillStyle = solid ? '#fff' : '#f8fafc';
+          c.fill();
+          c.strokeStyle = solid ? col : col + '40';
+          c.lineWidth = solid ? 1.6 : 1;
+          c.stroke();
+        }
+      });
+
+      // ── Active step cursor (only when a step is selected) ──
+      if (hasStep) {
+        const cx = toX(activeUp);
+
+        // Cursor line
+        c.beginPath();
+        c.moveTo(cx, PAD.top);
+        c.lineTo(cx, PAD.top + gH);
+        c.strokeStyle = 'rgba(29,78,216,0.6)';
+        c.lineWidth = 1.5;
+        c.setLineDash([3, 2]);
+        c.stroke();
+        c.setLineDash([]);
+
+        // Highlight dots at cursor
+        [[VMIN_ND, '#dc2626'], [VMIN_RL, '#16a34a']].forEach(([series, col]) => {
+          c.beginPath();
+          c.arc(cx, toY(series[activeUp]), 4, 0, Math.PI * 2);
+          c.fillStyle = col;
+          c.fill();
+          c.strokeStyle = '#fff';
+          c.lineWidth = 1.5;
+          c.stroke();
+        });
+
+        // Value labels — flip side near right edge
+        const nearRight = cx > PAD.left + gW * 0.72;
+        const labelX = nearRight ? cx - 7 : cx + 7;
+        const align  = nearRight ? 'right' : 'left';
+
+        c.font = 'bold 8px Inter,sans-serif';
+
+        c.fillStyle = '#dc2626';
+        c.textAlign = align;
+        c.textBaseline = 'middle';
+        const yND = toY(VMIN_ND[activeUp]);
+        const yRL = toY(VMIN_RL[activeUp]);
+        // Offset labels so they don't overlap
+        const sep = Math.abs(yND - yRL) < 10 ? 6 : 0;
+        c.fillText(VMIN_ND[activeUp].toFixed(3), labelX, yND - sep);
+
+        c.fillStyle = '#16a34a';
+        c.fillText(VMIN_RL[activeUp].toFixed(3), labelX, yRL + sep);
+      }
+    }
+
+    
+
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('.ctrl').forEach(b => b.classList.remove('active'));
+      const btnIdMap = { normal: 'btnNormal', attack: 'btnAttack', flow: 'btnFlow', voltage: 'btnVolt', rl: 'btnRl' };
+      const btnId = btnIdMap[m] || 'btnNormal';
+      document.getElementById(btnId).classList.add('active');
+
+      // Toggle RL-specific UI
+      const isRL = m === 'rl';
+      document.getElementById('splitLeft').style.display = isRL ? 'block' : 'none';
+      document.getElementById('splitRight').style.display = isRL ? 'block' : 'none';
+      document.getElementById('rlStats').style.display = isRL ? 'flex' : 'none';
+      document.getElementById('legRL1').style.display = isRL ? 'flex' : 'none';
+      document.getElementById('legRL2').style.display = isRL ? 'flex' : 'none';
+      document.getElementById('rlBadge').style.display = 'none';
+      document.getElementById('rlDamagePanel').style.display = isRL ? 'block' : 'none';
+
+      if (isRL) {
+        document.getElementById('splitRight').style.left = (W / 2 + 16) + 'px';
+        if (currentStep === 0) {
+          updateRLDamagePanel(getVoltages(0), getVoltagesRL(0), 0);
+          goToStep(1);
+        }
+      }
+
+      draw();
+    }
+
+    // Hover detection
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      // Determine which side we're hovering (for RL split mode)
+      let sides = ['single'];
+      if (mode === 'rl') sides = mx < W / 2 ? ['left'] : ['right'];
+
+      let closest = null, minD = (mode === 'rl' ? 18 : 22), closestSide = sides[0];
+      for (const side of (mode === 'rl' ? ['left', 'right'] : ['single'])) {
+        for (let b = 1; b <= 39; b++) {
+          const [bx, by] = busXY(b, side);
+          const d = Math.hypot(mx - bx, my - by);
+          if (d < minD) { minD = d; closest = b; closestSide = side; }
+        }
+      }
+
+      if (closest !== hovBus || closestSide !== hovSide) {
+        hovBus = closest;
+        hovSide = closestSide;
+        if (mode !== 'rl' && mode !== 'flow') draw();
+      }
+
+      if (closest) {
+        const meta = BUS_META[closest];
+        const V = getVoltages(currentStep);
+        const shed = getShed();
+        const over = getOverloaded();
+        const tt = document.getElementById('tooltip');
+
+        let statusColor = '#1d4ed8', statusText = 'Normal';
+        if (shed.has(closest)) { statusColor = '#dc2626'; statusText = 'Load shed (ransomware)'; }
+        if (over === closest) { statusColor = '#d97706'; statusText = 'Overloaded 300% (worm)'; }
+
+        // RL mode: show both voltages
+        let rlExtra = '';
+        if (mode === 'rl' && currentStep > 0) {
+          const VRL = getVoltagesRL(currentStep);
+          const vNoD = V[closest];
+          const vRL = VRL[closest];
+          const delta = ((vRL - vNoD) * 100).toFixed(2);
+          const deltaNum = parseFloat(delta);
+          const deltaColor = deltaNum > 0 ? '#16a34a' : deltaNum < -0.01 ? '#d97706' : '#374151';
+          const deltaSign = deltaNum >= 0 ? '+' : '';
+          const vNoDefColor = vNoD < 0.90 ? '#dc2626' : vNoD < 0.95 ? '#d97706' : '#374151';
+          const vRLColor = vRL >= 0.95 ? '#16a34a' : vRL >= 0.90 ? '#d97706' : '#dc2626';
+          rlExtra = `
+        <div style="border-top:1px solid #e4e7ec;margin:6px 0 4px;padding-top:6px"></div>
+        <div class="tt-row"><span class="tt-label">V (no defense)</span><span class="tt-val" style="color:${vNoDefColor}">${vNoD.toFixed(4)} p.u.</span></div>
+        <div class="tt-row"><span class="tt-label">V (RL agent)</span><span class="tt-val" style="color:${vRLColor}">${vRL.toFixed(4)} p.u.</span></div>
+        <div class="tt-row"><span class="tt-label">RL &Delta; voltage</span><span class="tt-val" style="color:${deltaColor}">${deltaSign}${delta}%</span></div>
+      `;
+        }
+
+        tt.style.display = 'block';
+        tt.style.left = (e.clientX + 16) + 'px';
+        tt.style.top = (e.clientY - 10) + 'px';
+        tt.innerHTML = `
+      <div class="tt-title" style="color:${meta.type === 'wind' ? '#059669' : meta.type === 'gen' ? '#1d4ed8' : '#374151'
+          }">${meta.label} — ${meta.type === 'wind' ? 'Wind Farm' : meta.type === 'gen' ? 'Generator' : 'Load Bus'}</div>
+      <div class="tt-row"><span class="tt-label">Description</span><span class="tt-val" style="font-size:0.6rem">${meta.desc}</span></div>
+      <div class="tt-row"><span class="tt-label">V nominal</span><span class="tt-val">${meta.Vnom.toFixed(4)} p.u.</span></div>
+      <div class="tt-row"><span class="tt-label">V current</span><span class="tt-val" style="color:${V[closest] < 0.95 ? '#dc2626' : V[closest] < 0.98 ? '#d97706' : '#1a202c'}">${V[closest].toFixed(4)} p.u.</span></div>
+      ${meta.Pd > 0 ? `<div class="tt-row"><span class="tt-label">Load</span><span class="tt-val">${meta.Pd} MW</span></div>` : ''}
+      ${meta.Pg ? `<div class="tt-row"><span class="tt-label">Generation</span><span class="tt-val">${meta.Pg} MW</span></div>` : ''}
+      ${meta.type === 'wind' ? `<div class="tt-row"><span class="tt-label">Inertia H</span><span class="tt-val" style="color:#d97706">0 s (no inertia)</span></div>` : ''}
+      <div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${statusColor}">${statusText}</span></div>
+      ${rlExtra}
+    `;
+      } else {
+        document.getElementById('tooltip').style.display = 'none';
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      hovBus = null;
+      document.getElementById('tooltip').style.display = 'none';
+      draw();
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ATTACK STEP PLAYER
+    // ═══════════════════════════════════════════════════════════════════
+
+    function buildStepButtons() {
+      const row = document.getElementById('stepRow');
+      for (let s = 1; s <= 15; s++) {
+        const btn = document.createElement('button');
+        btn.className = 'step-btn ' + SEQUENCE[s - 1];
+        btn.textContent = s;
+        btn.id = `sbtn${s}`;
+        btn.onclick = () => goToStep(s);
+        row.appendChild(btn);
+      }
+    }
+
+    function goToStep(s) {
+      currentStep = s;
+      document.getElementById('stepNum').textContent = s;
+      document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById(`sbtn${s}`);
+      if (btn) btn.classList.add('active');
+
+      updateCumDamage(s);
+      drawTrendChart(s);
+
+      // Auto-switch mode to show attacks (but not if in RL mode)
+      if (SEQUENCE[s - 1] !== 'normal' && mode === 'normal') {
+        setMode('attack');
+      }
+      draw();
+    }
+
+    function togglePlay() {
+      playing = !playing;
+      document.getElementById('playBtn').textContent = playing ? '⏸ PAUSE' : '▶ PLAY';
+      if (playing) {
+        if (currentStep >= 15) currentStep = 0;
+        function advance() {
+          if (!playing) return;
+          const next = currentStep + 1;
+          if (next > 15) { playing = false; document.getElementById('playBtn').textContent = '▶ PLAY'; return; }
+          goToStep(next);
+          playTimer = setTimeout(advance, SEQUENCE[next - 1] === 'normal' ? 600 : 1200);
+        }
+        advance();
+      } else {
+        clearTimeout(playTimer);
+      }
+    }
+
+    function resetSim() {
+      playing = false;
+      clearTimeout(playTimer);
+      document.getElementById('playBtn').textContent = '▶ PLAY';
+      currentStep = 0;
+      document.getElementById('stepNum').textContent = '—';
+      document.querySelectorAll('.step-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('hVmin').textContent = '1.0000';
+      document.getElementById('hVmin').style.color = '#1a202c';
+      updateCumDamage(0);
+      drawTrendChart(0);
+      setMode('normal');
+    }
+
+    // ── Draggable panels ──
+    function makeDraggable(panel, handle) {
+      let dragging = false, ox = 0, oy = 0;
+      handle.style.cursor = 'grab';
+      handle.addEventListener('mousedown', e => {
+        dragging = true;
+        ox = e.clientX - panel.offsetLeft;
+        oy = e.clientY - panel.offsetTop;
+        handle.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        const x = Math.max(0, Math.min(window.innerWidth  - panel.offsetWidth,  e.clientX - ox));
+        const y = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, e.clientY - oy));
+        panel.style.left = x + 'px';
+        panel.style.top  = y + 'px';
+        panel.style.bottom = 'auto';
+        panel.style.right  = 'auto';
+      });
+      document.addEventListener('mouseup', () => {
+        dragging = false;
+        handle.style.cursor = 'grab';
+      });
+    }
+
+    // Apply to every panel — use first child as drag handle
+    ['rlDamagePanel', 'cumDmgPanel', 'legend', 'player', 'chartPanel'].forEach(id => {
+      const panel = document.getElementById(id);
+      if (!panel) return;
+      // Use existing named handle if present, otherwise the first child element
+      const handle = document.getElementById(id + 'Handle') || panel.firstElementChild;
+      if (handle) makeDraggable(panel, handle);
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════
+    buildStepButtons();
+    drawTrendChart(0);
+    window.addEventListener('resize', () => { resize(); drawTrendChart(currentStep); });
+    resize();
+  </script>
+</body>
+
+</html>
